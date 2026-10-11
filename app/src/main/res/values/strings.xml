@@ -2,5 +2,4 @@
 <resources>
     <string name="app_name">WPS Root 提示隐藏</string>
     <string name="module_description">仅隐藏WPS的“设备已Root”提示，保留其他Toast和root检测结果。</string>
-    <string-array name="xposed_scope"><item>cn.wps.moffice_eng</item></string-array>
 </resources>

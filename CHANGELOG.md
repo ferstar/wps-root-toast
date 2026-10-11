@@ -2,6 +2,7 @@
 
 ## 1.0.0
 
+- 使用 libxposed Modern API 102.0.0 和 modern 模块入口，不包含 legacy API。
 - 仅隐藏 WPS Office 的已知简体中文 root 警告。
 - 保留其他 Toast、root 检测结果及应用组件。
 - 作用域限制为 `cn.wps.moffice_eng`。

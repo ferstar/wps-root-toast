@@ -1,42 +1,57 @@
 package io.github.ferstar.wpsroottoast;
 
+import android.util.Log;
 import android.widget.Toast;
-import de.robv.android.xposed.IXposedHookLoadPackage;
-import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
-import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import java.lang.reflect.Field;
+import io.github.libxposed.api.XposedModule;
+import io.github.libxposed.api.XposedInterface.ExceptionMode;
 
-/** Filters a single warning in WPS, without changing its root detection. */
-public final class Hook implements IXposedHookLoadPackage {
+/** Modern API 102 module: filters one warning without changing root detection. */
+public final class Hook extends XposedModule {
     private static final String TARGET_PACKAGE = "cn.wps.moffice_eng";
-    private static boolean installed;
+    private static final String TAG = "WpsRootToast";
+    private boolean installed;
 
     @Override
-    public synchronized void handleLoadPackage(XC_LoadPackage.LoadPackageParam app) {
-        if (!TARGET_PACKAGE.equals(app.packageName) || installed) return;
+    public void onPackageReady(PackageReadyParam app) {
+        if (TARGET_PACKAGE.equals(app.getPackageName())) installFilter();
+    }
+
+    @Override
+    public void onHotReloaded(HotReloadedParam param) {
+        String process = param.getProcessName();
+        if (TARGET_PACKAGE.equals(process) || process.startsWith(TARGET_PACKAGE + ":")) {
+            // API 102 replaces this module's previous hook atomically by its stable id.
+            installFilter();
+        }
+    }
+
+    private synchronized void installFilter() {
+        if (installed) return;
         try {
-            XposedHelpers.findAndHookMethod(Toast.class, "show", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
-                    Object text;
-                    try {
-                        text = XposedHelpers.getObjectField(param.thisObject, "mText");
-                    } catch (Throwable ignored) {
-                        // A changed Android implementation or a custom Toast stays untouched.
-                        return;
-                    }
-                    if (text instanceof CharSequence && RootWarningMatcher.matches((CharSequence) text)) {
-                        param.setResult(null);
-                        XposedBridge.log("[WpsRootToast] Blocked matching root warning");
-                    }
-                }
-            });
+            Field textField = Toast.class.getDeclaredField("mText");
+            textField.setAccessible(true);
+            hook(Toast.class.getDeclaredMethod("show"))
+                    .setId("wps-root-warning-text")
+                    .setExceptionMode(ExceptionMode.PROTECTIVE)
+                    .intercept(chain -> {
+                        Object text;
+                        try {
+                            text = textField.get(chain.getThisObject());
+                        } catch (ReflectiveOperationException | SecurityException ignored) {
+                            return chain.proceed();
+                        }
+                        if (text instanceof CharSequence && RootWarningMatcher.matches((CharSequence) text)) {
+                            log(Log.INFO, TAG, "Blocked matching root warning (API 102)");
+                            return null;
+                        }
+                        return chain.proceed();
+                    });
             installed = true;
-            XposedBridge.log("[WpsRootToast] Exact warning filter installed");
-        } catch (Throwable ignored) {
-            // Fail open: preserve WPS behavior if a future framework changes the API.
-            XposedBridge.log("[WpsRootToast] Filter unavailable; WPS behavior unchanged");
+            log(Log.INFO, TAG, "Exact warning filter installed (API 102)");
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            // Fail open if a future Android/framework release changes the reflection or hook API.
+            log(Log.WARN, TAG, "Filter unavailable; WPS behavior unchanged");
         }
     }
 }
