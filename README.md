@@ -6,6 +6,8 @@
 
 ## 新方案：向 WPS 隐藏 Root 管理器
 
+完整排查过程见博客：[你关的是开关，它开的是名单：WPS 是怎么查到我 Root 的](https://blog.ferstar.org/posts/how-to-avoid-wps-root-detection/)。文章记录了 Toast 模块、六项检测链、本机命中项以及 HMA 方案的验证过程。
+
 在 Android 16、WPS Office 26.9.1（1991）、KernelSU 的实机上，进一步排查发现：WPS 的 Root 判断包含多条路径，本机命中的是通过 PackageManager 查询 `me.weishu.kernelsu`（KernelSU 管理器），而不是 PATH 中的 `su`、相关系统属性或 `test-keys`。
 
 WPS 在 Manifest 的 `<queries>` 中声明了相关包，因此即使没有授予“读取应用列表”权限，仍可查询这些指定包。仅拒绝应用列表权限不足以阻断本机这条判断路径。
