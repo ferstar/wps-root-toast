@@ -31,7 +31,7 @@ APK 的最低 Android 版本为 8.0（API 26），但其他 Android/WPS 组合�
 
 ## 原理与隐私
 
-模块使用 `XposedModule`、modern 入口文件和 interceptor chain API，仅在 `cn.wps.moffice_eng` 中 Hook `Toast.show()`，读取 Toast 的 `mText`，忽略排版空白后对整句提示做精确匹配。只有匹配这句 root 提醒时才跳过显示，其他调用通过 `chain.proceed()` 放行。无法读取文本或 Hook 失败时，保留应用原有行为。API 102 的稳定 hook id 支持框架热重载时原子替换此模块的旧 hook。
+模块使用 `XposedModule`、modern 入口文件和 interceptor chain API，仅在 `cn.wps.moffice_eng` 中拦截公开的 `Toast.makeText/setText/show` 方法。创建或更新 Toast 时，忽略排版空白后对整句提示做精确匹配，用弱引用集合标记对应的 Toast；只有被标记对象的 `show()` 被跳过，其他调用通过 `chain.proceed()` 放行。更新为普通文字或自定义视图时移除标记。模块不读取隐藏的 `Toast.mText` 字段、不保留提示文本，Hook 失败时恢复应用原有行为。API 102 的稳定 hook id 支持框架热重载时原子替换此模块的旧 hook。
 
 不申请权限，不联网，不收集文档、账号或设备信息，不记录 Toast 文本。LSPosed 日志仅记录模块加载和命中拦截的状态。隐藏提示不改变设备实际的 root 状态或安全风险。
 
