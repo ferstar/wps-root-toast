@@ -1,5 +1,28 @@
 # WPS Root 提示隐藏
 
+## 项目状态：已归档
+
+本项目停止维护，源码和已发布 APK 保留供参考。对于下面实测的 WPS Root 提示，推荐使用 **隐藏应用列表（Hide My Applist，HMA）** 隐藏 Root 管理器包；本模块保留为只屏蔽提示的历史实现。
+
+## 新方案：向 WPS 隐藏 Root 管理器
+
+在 Android 16、WPS Office 26.9.1（1991）、KernelSU 的实机上，进一步排查发现：WPS 的 Root 判断包含多条路径，本机命中的是通过 PackageManager 查询 `me.weishu.kernelsu`（KernelSU 管理器），而不是 PATH 中的 `su`、相关系统属性或 `test-keys`。
+
+WPS 在 Manifest 的 `<queries>` 中声明了相关包，因此即使没有授予“读取应用列表”权限，仍可查询这些指定包。仅拒绝应用列表权限不足以阻断本机这条判断路径。
+
+实测配置（HMA 3.8.3，LSPosed 2.2.1）：
+
+1. 从 [HMA 模块发布页](https://github.com/Xposed-Modules-Repo/com.tsng.hidemyapplist) 安装隐藏应用列表，并按其说明在 LSPosed 中启用；本机作用域仅勾选系统框架。
+2. 在 HMA 创建黑名单模板，将 `me.weishu.kernelsu` 加入隐藏列表。使用其他 Root 管理器时应选择实际安装的包；本项目未验证其他管理器的效果。
+3. 将模板仅应用于 WPS Office（`cn.wps.moffice_eng`）。本机配置启用“排除系统应用”，关闭“增强过滤”和详细日志。
+4. 关闭本项目的 **WPS Root 提示隐藏** 模块，按 HMA 的要求使配置生效，再强制停止并重新打开 WPS。
+
+本机在关闭 Toast 屏蔽模块后，Root 提示仍未出现。这说明隐藏管理器包已经阻断本机命中的检测路径，不需要再屏蔽提示。无需修改 WPS APK 或其 Manifest。
+
+此结果仅适用于上述已验证环境：隐藏包不会改变设备实际的 Root 状态，也不保证绕过 WPS 的其他检测路径；不同版本或设备需要重新验证。HMA 的使用问题请查阅其项目文档，本仓库归档后不再接受新问题。
+
+## 历史模块说明
+
 一个使用 **libxposed Modern API 102.0.0** 的轻量模块，只隐藏 WPS Office 启动时的这条简体中文提示：
 
 > 设备已Root，使用WPS Office可能存在安全风险。
@@ -57,7 +80,7 @@ GitHub Actions 对提交执行单元测试、lint 和 debug 构建。维护者�
 
 ## 反馈
 
-请在 [Issues](https://github.com/ferstar/wps-root-toast/issues) 中提供 Android、WPS、LSPosed 版本，以及相关的模块日志。截图请遮挡账号和文档名称。
+本仓库已归档，不再接受新 Issue 或提供版本适配。历史问题与实现保留供查阅。
 
 本项目与 WPS/金山办公没有关联，不包含 WPS 的代码或商标图标。
 
